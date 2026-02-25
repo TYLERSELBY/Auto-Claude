@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DrawingExtractionResult",
+  "description": "Schema for structured extraction from a single object/sub-drawing on a technical sheet",
+  "type": "object",
+  "required": ["sheet_id", "object_id", "extraction_timestamp", "fields", "provenance"],
+  "properties": {
+    "sheet_id": {
+      "type": "string",
+      "description": "Identifier for the source sheet (e.g., filename without extension)"
+    },
+    "object_id": {
+      "type": "string",
+      "description": "Identifier for the sub-drawing/object within the sheet"
+    },
+    "extraction_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "bounding_box": {
+      "type": "object",
+      "description": "Pixel-space bounding box of this object's sub-drawing on the sheet",
+      "properties": {
+        "x_min": { "type": "number" },
+        "y_min": { "type": "number" },
+        "x_max": { "type": "number" },
+        "y_max": { "type": "number" },
+        "page": { "type": "integer" },
+        "coordinate_system": {
+          "type": "string",
+          "enum": ["pixel_top_left", "pdf_bottom_left"],
+          "default": "pixel_top_left"
+        }
+      },
+      "required": ["x_min", "y_min", "x_max", "y_max", "page"]
+    },
+    "fields": {
+      "type": "array",
+      "description": "Extracted fields/properties for this object",
+      "items": {
+        "$ref": "#/definitions/ExtractedField"
+      }
+    },
+    "views": {
+      "type": "array",
+      "description": "Views detected within this object's sub-drawing",
+      "items": {
+        "type": "object",
+        "properties": {
+          "view_type": {
+            "type": "string",
+            "enum": ["plan", "elevation", "section", "isometric", "detail", "unknown"]
+          },
+          "bounding_box": {
+            "type": "object",
+            "properties": {
+              "x_min": { "type": "number" },
+              "y_min": { "type": "number" },
+              "x_max": { "type": "number" },
+              "y_max": { "type": "number" }
+            }
+          },
+          "label": { "type": "string" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "source_file": { "type": "string" },
+        "extraction_method": {
+          "type": "string",
+          "enum": ["pdf_text_layer", "ocr", "vision_llm", "manual", "hybrid"]
+        },
+        "template_id": {
+          "type": ["string", "null"],
+          "description": "If extracted using a template from another object"
+        },
+        "pipeline_version": { "type": "string" }
+      }
+    },
+    "qa_status": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "needs_review"],
+      "default": "pending"
+    }
+  },
+  "definitions": {
+    "ExtractedField": {
+      "type": "object",
+      "required": ["field_name", "value", "confidence"],
+      "properties": {
+        "field_name": {
+          "type": "string",
+          "description": "Schema column name (e.g., 'plate_thickness', 'hole_diameter', 'part_id')"
+        },
+        "value": {
+          "type": ["string", "number", "null"],
+          "description": "Extracted value"
+        },
+        "unit": {
+          "type": ["string", "null"],
+          "description": "Unit if applicable (mm, in, etc.)"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Extraction confidence score"
+        },
+        "source_annotations": {
+          "type": "array",
+          "description": "Locations on the sheet where this value was found",
+          "items": {
+            "$ref": "#/definitions/SourceAnnotation"
+          }
+        },
+        "association": {
+          "type": ["object", "null"],
+          "description": "If this field was extracted from a dimension/leader, describe the association",
+          "properties": {
+            "annotation_type": {
+              "type": "string",
+              "enum": ["dimension_line", "leader_line", "callout_bubble", "note", "label", "direct_text"]
+            },
+            "referenced_feature": {
+              "type": ["string", "null"],
+              "description": "Description of the geometric feature this annotation points to"
+            },
+            "association_confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "view_source": {
+          "type": ["string", "null"],
+          "description": "Which view within the object this was extracted from"
+        }
+      }
+    },
+    "SourceAnnotation": {
+      "type": "object",
+      "properties": {
+        "text_as_read": {
+          "type": "string",
+          "description": "Raw text as OCR'd or extracted"
+        },
+        "bbox": {
+          "type": "object",
+          "description": "Bounding box of the text/annotation on the sheet (pixel coords, origin top-left)",
+          "properties": {
+            "x_min": { "type": "number" },
+            "y_min": { "type": "number" },
+            "x_max": { "type": "number" },
+            "y_max": { "type": "number" }
+          }
+        },
+        "rotation_degrees": {
+          "type": "number",
+          "description": "Rotation of the text in degrees (0 = horizontal left-to-right)"
+        },
+        "page": { "type": "integer" }
+      }
+    }
+  }
+}
